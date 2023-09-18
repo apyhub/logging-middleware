@@ -111,7 +111,13 @@ func (rq *requestData) formatLog() string {
 		if !isJson(rq.Headers["Content-Type"][0]) {
 			logString = append(logString, getLogPart(`"body"`, getQuotedOrJson(rq.Body)))
 		} else {
-			logString = append(logString, getLogPart(`"body"`, rq.Body))
+			var requestBody map[string]interface{}
+			if err := json.Unmarshal(rq.Body, &requestBody); err != nil {
+				log.Output(1, "invalid json - request body cannot be unmarshalled")
+				logString = append(logString, getLogPart(`"body"`, getQuotedOrJson(rq.Body)))
+			} else {
+				logString = append(logString, getLogPart(`"body"`, rq.Body))
+			}
 		}
 	}
 	return fmt.Sprintf("%s", strings.Join(logString, ","))
@@ -355,7 +361,6 @@ func getQuotedOrJson(data []byte) []byte {
 func CaptureError(w http.ResponseWriter, err error) error {
 	if crw, ok := w.(*customResponseWriter); ok {
 		if err != nil {
-			log.Output(1, "rawErr")
 			crw.writeError(err)
 		} else {
 			return fmt.Errorf("err cannot be nil")
