@@ -27,7 +27,10 @@ var ignoredHeaders = map[string]struct{}{
 }
 
 func Logging(serviceName string) mux.MiddlewareFunc {
-	logger := getLogger(serviceName)
+	logger, err := getLogger(serviceName)
+	if err!=nil{
+		log.Fatal("error in initiating zap in logger middleware", err.Error())
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			customRW := &customResponseWriter{
