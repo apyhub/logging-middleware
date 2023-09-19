@@ -208,7 +208,7 @@ func (r *responseData) formatLog() string {
 	}
 
 	if r.Body != nil {
-		if len(r.Headers["Content-Type"]) > 0 && !isJson(r.Headers["Content-Type"][0]) {
+		if r.Headers["Content-Type"] == nil || !isJson(r.Headers["Content-Type"][0]) {
 			logString = append(logString, getLogPart(`"body"`, getQuotedOrJson(r.Body)))
 		} else {
 			logString = append(logString, fmt.Sprintf(`"body": %s`, r.Body))
