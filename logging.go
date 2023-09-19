@@ -55,6 +55,8 @@ func Logging(serviceName string) mux.MiddlewareFunc {
 					http.Error(w, "Failed to read request Body", http.StatusInternalServerError)
 					return
 				}
+			} else {
+				customRW.LogData.Request.Body = []byte(UnknownContentType)
 			}
 			customRW.LogData.URL = r.URL.Path
 			traceId := uuid.New()
@@ -108,7 +110,7 @@ func (rq *requestData) formatLog() string {
 	}
 	if len(rq.Body) > 0 {
 		// not converting r.Body to json because we're not sure what the body will be
-		if !isJson(rq.Headers["Content-Type"][0]) {
+		if rq.Headers["Content-Type"] == nil || !isJson(rq.Headers["Content-Type"][0]) {
 			logString = append(logString, getLogPart(`"body"`, getQuotedOrJson(rq.Body)))
 		} else {
 			var requestBody map[string]interface{}
