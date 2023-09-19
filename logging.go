@@ -208,7 +208,7 @@ func (r *responseData) formatLog() string {
 	}
 
 	if r.Body != nil {
-		if !isJson(r.Headers["Content-Type"][0]) {
+		if len(r.Headers["Content-Type"]) > 0 && !isJson(r.Headers["Content-Type"][0]) {
 			logString = append(logString, getLogPart(`"body"`, getQuotedOrJson(r.Body)))
 		} else {
 			logString = append(logString, fmt.Sprintf(`"body": %s`, r.Body))
@@ -230,11 +230,16 @@ func (rw *customResponseWriter) WriteHeader(statusCode int) {
 func (rw *customResponseWriter) Write(b []byte) (int, error) {
 	rw.LogData.Response.Headers = rw.ResponseWriter.Header()
 	contentType := rw.ResponseWriter.Header().Get("Content-Type")
-	if isStringRepresent(contentType) {
-		rw.LogData.Response.Body = b
+	if strings.TrimSpace(contentType) != "" {
+		if isStringRepresent(contentType) {
+			rw.LogData.Response.Body = b
+		} else {
+			rw.LogData.Response.Body = []byte(contentType + " data")
+		}
 	} else {
-		rw.LogData.Response.Body = []byte(contentType + " data")
+		rw.LogData.Response.Body = []byte(UnknownContentType)
 	}
+
 	if !(200 <= rw.LogData.StatusCode && rw.LogData.StatusCode <= 299) {
 		stackTrace := strings.Split(strings.ReplaceAll(captureStackTrace(), "\t", ""), "\n")
 		rw.LogData.StackTrace = stackTrace[:len(stackTrace)-1]
