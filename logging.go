@@ -28,7 +28,7 @@ var ignoredHeaders = map[string]struct{}{
 
 func Logging(serviceName string) mux.MiddlewareFunc {
 	logger, err := getLogger(serviceName)
-	if err!=nil{
+	if err != nil {
 		log.Fatal("error in initiating zap in logger middleware", err.Error())
 	}
 	return func(next http.Handler) http.Handler {
@@ -49,17 +49,15 @@ func Logging(serviceName string) mux.MiddlewareFunc {
 			}
 			contentType := r.Header.Get("Content-Type")
 			if isStringRepresent(contentType) {
-				if err := customRW.LogData.Request.inspectJsonData(r); err != nil {
-					http.Error(w, "Failed to read request Body", http.StatusInternalServerError)
-					return
-				}
+				err = customRW.LogData.Request.inspectJsonData(r)
 			} else if strings.HasPrefix(contentType, "multipart/form-data") {
-				if err := customRW.LogData.Request.inspectMultipartForm(r); err != nil {
-					http.Error(w, "Failed to read request Body", http.StatusInternalServerError)
-					return
-				}
+				err = customRW.LogData.Request.inspectMultipartForm(r)
 			} else {
-				customRW.LogData.Request.Body = []byte(UnknownContentType)
+				err = customRW.LogData.Request.inspectGeneralBody(r)
+			}
+			if err != nil {
+				http.Error(w, "Failed to read request Body", http.StatusInternalServerError)
+				return
 			}
 			customRW.LogData.URL = r.URL.Path
 			traceId := uuid.New()
@@ -126,6 +124,19 @@ func (rq *requestData) formatLog() string {
 		}
 	}
 	return fmt.Sprintf("%s", strings.Join(logString, ","))
+}
+
+func (rq *requestData) inspectGeneralBody(r *http.Request) error {
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+	log.Output(1, fmt.Sprintf("length of body is %v", len(reqBody)))
+	if len(reqBody) > 0 {
+		rq.Body = []byte(UnknownContentType)
+	}
+	return nil
 }
 
 func (rq *requestData) inspectMultipartForm(r *http.Request) error {
