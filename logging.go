@@ -64,7 +64,13 @@ func Logging(serviceName string) mux.MiddlewareFunc {
 			ctx := context.WithValue(r.Context(), "trace_id", traceId.String())
 			customRW.LogData.TraceId = traceId.String()
 			next.ServeHTTP(customRW, r.WithContext(ctx))
-			logger.Info("SERVICE LOG", zap.Any("data", customRW.getFormattedLog()))
+			if 400 < customRW.LogData.StatusCode && customRW.LogData.StatusCode < 499 {
+				logger.Warn("SERVICE LOG", zap.Any("data", customRW.getFormattedLog()))
+			} else if 500 < customRW.LogData.StatusCode && customRW.LogData.StatusCode < 599 {
+				logger.Error("SERVICE LOG", zap.Any("data", customRW.getFormattedLog()))
+			} else {
+				logger.Info("SERVICE LOG", zap.Any("data", customRW.getFormattedLog()))
+			}
 		})
 	}
 }
